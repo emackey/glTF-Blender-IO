@@ -42,11 +42,13 @@ def gather_primitives(
     :return: a list of glTF2 primitives
     """
     primitives = []
+    print("**** gather_primitives")
     blender_primitives = gltf2_blender_extract.extract_primitives(
         None, blender_mesh, vertex_groups, modifiers, export_settings)
 
     for internal_primitive in blender_primitives:
 
+        print("**** begin gather primitive")
         primitive = gltf2_io.MeshPrimitive(
             attributes=__gather_attributes(internal_primitive, blender_mesh, modifiers, export_settings),
             extensions=None,
@@ -57,6 +59,7 @@ def gather_primitives(
             targets=__gather_targets(internal_primitive, blender_mesh, modifiers, export_settings)
         )
         primitives.append(primitive)
+        print("**** end gather primitive")
 
     return primitives
 
@@ -70,6 +73,7 @@ def __gather_materials(blender_primitive, blender_mesh, modifiers, export_settin
 
 
 def __gather_indices(blender_primitive, blender_mesh, modifiers, export_settings):
+    print("**** begin gather_indicies")
     indices = blender_primitive['indices']
 
     max_index = max(indices)
@@ -83,7 +87,7 @@ def __gather_indices(blender_primitive, blender_mesh, modifiers, export_settings
 
     element_type = gltf2_io_constants.DataType.Scalar
     binary_data = gltf2_io_binary_data.BinaryData.from_list(indices, component_type)
-    return gltf2_io.Accessor(
+    temp_result = gltf2_io.Accessor(
         buffer_view=binary_data,
         byte_offset=None,
         component_type=component_type,
@@ -97,6 +101,8 @@ def __gather_indices(blender_primitive, blender_mesh, modifiers, export_settings
         sparse=None,
         type=element_type
     )
+    print("**** end gather_indicies")
+    return temp_result
 
 
 def __gather_attributes(blender_primitive, blender_mesh, modifiers, export_settings):
@@ -104,6 +110,7 @@ def __gather_attributes(blender_primitive, blender_mesh, modifiers, export_setti
 
 
 def __gather_targets(blender_primitive, blender_mesh, modifiers, export_settings):
+    print("**** begin gather_targets")
     if export_settings[MORPH]:
         targets = []
         if blender_mesh.shape_keys is not None:
@@ -190,5 +197,7 @@ def __gather_targets(blender_primitive, blender_mesh, modifiers, export_settings
                             )
                         targets.append(target)
                         morph_index += 1
+        print("**** end gather_targets")
         return targets
+    print("**** end gather_targets with None")
     return None

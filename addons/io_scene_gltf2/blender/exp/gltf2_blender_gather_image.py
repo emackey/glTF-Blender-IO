@@ -16,6 +16,7 @@ import bpy
 import typing
 import os
 import numpy as np
+import time
 
 from . import gltf2_blender_export_keys
 from io_scene_gltf2.io.com import gltf2_io
@@ -30,6 +31,7 @@ def gather_image(
         export_settings):
     if not __filter_image(blender_shader_sockets_or_texture_slots, export_settings):
         return None
+    print("****", time.time(), "begin gather_image")
     image = gltf2_io.Image(
         buffer_view=__gather_buffer_view(blender_shader_sockets_or_texture_slots, export_settings),
         extensions=__gather_extensions(blender_shader_sockets_or_texture_slots, export_settings),
@@ -38,6 +40,7 @@ def gather_image(
         name=__gather_name(blender_shader_sockets_or_texture_slots, export_settings),
         uri=__gather_uri(blender_shader_sockets_or_texture_slots, export_settings)
     )
+    print("****", time.time(), "end gather_image", image.name)
     return image
 
 
@@ -97,6 +100,8 @@ def __get_image_data(sockets_or_slots, export_settings):
     # For shared ressources, such as images, we just store the portion of data that is needed in the glTF property
     # in a helper class. During generation of the glTF in the exporter these will then be combined to actual binary
     # ressources.
+    print("****", time.time(), "begin __get_image_data")
+
     def split_pixels_by_channels(image: bpy.types.Image, export_settings) -> typing.List[typing.List[float]]:
         channelcache = export_settings['gltf_channelcache']
         if image.name in channelcache:
@@ -162,6 +167,7 @@ def __get_image_data(sockets_or_slots, export_settings):
             else:
                 image.add_to_image(target_channel, image_data)
 
+        print("****", time.time(), "end __get_image_data from mapping")
         return image
     elif __is_slot(sockets_or_slots):
         texture = __get_tex_from_slot(sockets_or_slots[0])
@@ -176,6 +182,7 @@ def __get_image_data(sockets_or_slots, export_settings):
             0,
             len(pixels),
             pixels)
+        print("****", time.time(), "end __get_image_data from slots")
         return image_data
     else:
         # Texture slots

@@ -30,6 +30,7 @@ def gather_mesh(blender_mesh: bpy.types.Mesh,
     if not skip_filter and not __filter_mesh(blender_mesh, vertex_groups, modifiers, export_settings):
         return None
 
+    print("**** begin gather_mesh", blender_mesh.name)
     mesh = gltf2_io.Mesh(
         extensions=__gather_extensions(blender_mesh, vertex_groups, modifiers, export_settings),
         extras=__gather_extras(blender_mesh, vertex_groups, modifiers, export_settings),
@@ -37,6 +38,7 @@ def gather_mesh(blender_mesh: bpy.types.Mesh,
         primitives=__gather_primitives(blender_mesh, vertex_groups, modifiers, export_settings),
         weights=__gather_weights(blender_mesh, vertex_groups, modifiers, export_settings)
     )
+    print("**** end gather_mesh", blender_mesh.name)
 
     return mesh
 

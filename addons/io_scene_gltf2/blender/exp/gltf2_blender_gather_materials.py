@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import bpy
+import time
 
 from io_scene_gltf2.blender.exp.gltf2_blender_gather_cache import cached
 from io_scene_gltf2.io.com import gltf2_io
@@ -37,6 +38,7 @@ def gather_material(blender_material, export_settings):
     if not __filter_material(blender_material, export_settings):
         return None
 
+    print("****", time.time(), "begin gather_material", blender_material.name)
     material = gltf2_io.Material(
         alpha_cutoff=__gather_alpha_cutoff(blender_material, export_settings),
         alpha_mode=__gather_alpha_mode(blender_material, export_settings),
@@ -50,6 +52,7 @@ def gather_material(blender_material, export_settings):
         occlusion_texture=__gather_occlusion_texture(blender_material, export_settings),
         pbr_metallic_roughness=__gather_pbr_metallic_roughness(blender_material, export_settings)
     )
+    print("****", time.time(), "end gather_material", blender_material.name)
 
     return material
     # material = blender_primitive['material']
@@ -77,6 +80,7 @@ def __filter_material(blender_material, export_settings):
 
 
 def __gather_alpha_cutoff(blender_material, export_settings):
+    print("****", time.time(), "__gather_alpha_cutoff")
     if bpy.app.version < (2, 80, 0):
         return None
     else:
@@ -86,6 +90,7 @@ def __gather_alpha_cutoff(blender_material, export_settings):
 
 
 def __gather_alpha_mode(blender_material, export_settings):
+    print("****", time.time(), "__gather_alpha_mode")
     if bpy.app.version < (2, 80, 0):
         return None
     else:
@@ -102,8 +107,11 @@ def __gather_double_sided(blender_material, export_settings):
 
 def __gather_emissive_factor(blender_material, export_settings):
     emissive_socket = gltf2_blender_get.get_socket_or_texture_slot(blender_material, "Emissive")
+    print("****", time.time(), "__gather_emissive_factor for", blender_material.name, "socket", emissive_socket)
     if emissive_socket is None:
         emissive_socket = gltf2_blender_get.get_socket_or_texture_slot_old(blender_material, "EmissiveFactor")
+    if isinstance(emissive_socket, bpy.types.NodeSocket):
+        print("**** is linked", emissive_socket.is_linked)
     if isinstance(emissive_socket, bpy.types.NodeSocket) and not emissive_socket.is_linked:
         return list(emissive_socket.default_value)[0:3]
     return None
@@ -111,12 +119,15 @@ def __gather_emissive_factor(blender_material, export_settings):
 
 def __gather_emissive_texture(blender_material, export_settings):
     emissive = gltf2_blender_get.get_socket_or_texture_slot(blender_material, "Emissive")
+    print("****", time.time(), "__gather_emissive_texture for", blender_material.name, "tex", emissive)
     if emissive is None:
+        print("**** trying again")
         emissive = gltf2_blender_get.get_socket_or_texture_slot_old(blender_material, "Emissive")
     return gltf2_blender_gather_texture_info.gather_texture_info((emissive,), export_settings)
 
 
 def __gather_extensions(blender_material, export_settings):
+    print("****", time.time(), "__gather_extensions")
     extensions = {}
 
     if bpy.app.version < (2, 80, 0):
@@ -129,16 +140,19 @@ def __gather_extensions(blender_material, export_settings):
 
 
 def __gather_extras(blender_material, export_settings):
+    print("****", time.time(), "__gather_extras")
     if export_settings['gltf_extras']:
         return gltf2_blender_generate_extras.generate_extras(blender_material)
     return None
 
 
 def __gather_name(blender_material, export_settings):
+    print("****", time.time(), "__gather_name")
     return blender_material.name
 
 
 def __gather_normal_texture(blender_material, export_settings):
+    print("****", time.time(), "__gather_normal_texture")
     normal = gltf2_blender_get.get_socket_or_texture_slot(blender_material, "Normal")
     if normal is None:
         normal = gltf2_blender_get.get_socket_or_texture_slot_old(blender_material, "Normal")
@@ -148,6 +162,7 @@ def __gather_normal_texture(blender_material, export_settings):
 
 
 def __gather_occlusion_texture(blender_material, export_settings):
+    print("****", time.time(), "__gather_occlusion_texture")
     occlusion = gltf2_blender_get.get_socket_or_texture_slot(blender_material, "Occlusion")
     if occlusion is None:
         occlusion = gltf2_blender_get.get_socket_or_texture_slot_old(blender_material, "Occlusion")
@@ -157,6 +172,7 @@ def __gather_occlusion_texture(blender_material, export_settings):
 
 
 def __gather_pbr_metallic_roughness(blender_material, export_settings):
+    print("****", time.time(), "__gather_pbr_metallic_roughness")
     return gltf2_blender_gather_materials_pbr_metallic_roughness.gather_material_pbr_metallic_roughness(
         blender_material,
         export_settings)

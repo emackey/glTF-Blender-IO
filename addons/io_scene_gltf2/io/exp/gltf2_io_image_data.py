@@ -17,6 +17,7 @@ import struct
 import re
 import zlib
 import numpy as np
+import time
 
 class ImageData:
     """Contains channels of an image with raw pixel data."""
@@ -92,6 +93,7 @@ class ImageData:
         raise ValueError("Unsupported image file type {}".format(mime_type))
 
     def to_png_data(self) -> bytes:
+        print("****", time.time(), "begin image.to_png_data")
         channels = self.channels
 
         # if there is no data, create a single pixel image
@@ -129,8 +131,12 @@ class ImageData:
             chunk_head = png_tag + data
             return struct.pack("!I", len(data)) + chunk_head + struct.pack("!I", 0xFFFFFFFF & zlib.crc32(chunk_head))
 
-        return b"".join([
+        print("****", time.time(), "nearly done image.to_png_data")
+        img_result = b"".join([
             b'\x89PNG\r\n\x1a\n',
             png_pack(b'IHDR', struct.pack("!2I5B", self.width, self.height, 8, 6, 0, 0, 0)),
             png_pack(b'IDAT', zlib.compress(raw_data, 9)),
             png_pack(b'IEND', b'')])
+        print("****", time.time(), "end image.to_png_data for", self.name)
+
+        return img_result
