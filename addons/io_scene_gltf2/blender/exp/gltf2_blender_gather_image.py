@@ -52,6 +52,36 @@ def gather_image(
     return image
 
 
+def gather_rgba_image(
+        socket_red: bpy.types.NodeSocket,
+        socket_green: bpy.types.NodeSocket,
+        socket_blue: bpy.types.NodeSocket,
+        socket_alpha: bpy.types.NodeSocket,
+        export_settings):
+    if not __filter_image(blender_shader_sockets_or_texture_slots, export_settings):
+        return None
+
+    # TODO: Use r/g/b/a sockets to assemble image data from separate images
+
+    uri = __gather_uri(blender_shader_sockets_or_texture_slots, export_settings)
+    buffer_view = __gather_buffer_view(blender_shader_sockets_or_texture_slots, export_settings)
+    if not (uri is not None or buffer_view is not None):
+        # The blender image has no data
+        return None
+
+    mime_type = __gather_mime_type(uri.filepath if uri is not None else "")
+
+    image = gltf2_io.Image(
+        buffer_view=buffer_view,
+        extensions=__gather_extensions(blender_shader_sockets_or_texture_slots, export_settings),
+        extras=__gather_extras(blender_shader_sockets_or_texture_slots, export_settings),
+        mime_type=mime_type,
+        name=__gather_name(blender_shader_sockets_or_texture_slots, export_settings),
+        uri=uri
+    )
+    return image
+
+
 def __filter_image(sockets_or_slots, export_settings):
     if not sockets_or_slots:
         return False

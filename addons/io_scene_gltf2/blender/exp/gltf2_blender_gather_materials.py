@@ -38,6 +38,10 @@ def gather_material(blender_material, mesh_double_sided, export_settings):
     if not __filter_material(blender_material, export_settings):
         return None
 
+    # glTF can share the Occlusion image (red) with rough/metal (green/blue).  We'll check for
+    # the possibility of that optimization first, and if not applicable we'll process separately.
+    #occlusion_roughness_metallic = __gather_orm_texture(blender_material, export_settings)
+
     material = gltf2_io.Material(
         alpha_cutoff=__gather_alpha_cutoff(blender_material, export_settings),
         alpha_mode=__gather_alpha_mode(blender_material, export_settings),
@@ -48,6 +52,7 @@ def gather_material(blender_material, mesh_double_sided, export_settings):
         extras=__gather_extras(blender_material, export_settings),
         name=__gather_name(blender_material, export_settings),
         normal_texture=__gather_normal_texture(blender_material, export_settings),
+        # TODO: Pass in occlusion_roughness_metallic as a paramter to both of the following two:
         occlusion_texture=__gather_occlusion_texture(blender_material, export_settings),
         pbr_metallic_roughness=__gather_pbr_metallic_roughness(blender_material, export_settings)
     )
@@ -160,6 +165,41 @@ def __gather_normal_texture(blender_material, export_settings):
         export_settings)
 
 
+def __gather_orm_texture(blender_material, export_settings):
+    # Check for the presence of Occlusion, Roughness, Metallic sharing a single image.
+    # If not fully shared, return None, so the images will be cached and processed separately.
+
+    occlusion = gltf2_blender_get.get_socket_or_texture_slot(blender_material, "Occlusion")
+    if occlusion is None:
+        occlusion = gltf2_blender_get.get_socket_or_texture_slot_old(blender_material, "Occlusion")
+        if occlusion is None:
+            return None
+
+    occlusion_image_node = __get_image_node_from_socket(occlusion)
+    if occlusion_image_node is None:
+        return None
+
+    # Occlusion:  index=__gather_index(blender_shader_sockets_or_texture_slots, export_settings)
+    # Occlusion:  index=__gather_index((occlusion,), export_settings)
+
+    metallic_socket = gltf2_blender_get.get_socket_or_texture_slot(blender_material, "Metallic")
+    roughness_socket = gltf2_blender_get.get_socket_or_texture_slot(blender_material, "Roughness")
+
+    if metallic_socket is None and roughness_socket is None:
+        metallic_roughness = gltf2_blender_get.get_socket_or_texture_slot_old(blender_material, "MetallicRoughness")
+        metal_rough_image_node = __get_image_node_from_socket(metallic_roughness)
+        if metal_rough_image_node is not occlusion_image_node:
+            return None
+    else:
+        metal_image_node = __get_image_node_from_socket(metallic_socket)
+        if metal_image_node is not occlusion_image_node:
+            return None
+        rough_image_node = __get_image_node_from_socket(roughness_socket)
+        if rough_image_node is not occlusion_image_node:
+            return None
+
+    return (occlusion,)
+
 def __gather_occlusion_texture(blender_material, export_settings):
     occlusion = gltf2_blender_get.get_socket_or_texture_slot(blender_material, "Occlusion")
     if occlusion is None:
@@ -173,3 +213,12 @@ def __gather_pbr_metallic_roughness(blender_material, export_settings):
     return gltf2_blender_gather_materials_pbr_metallic_roughness.gather_material_pbr_metallic_roughness(
         blender_material,
         export_settings)
+
+
+def __get_image_node_from_socket(socket):
+    result = gltf2_blender_search_node_tree.from_socket(
+        socket,
+        gltf2_blender_search_node_tree.FilterByType(bpy.types.ShaderNodeTexImage))
+    if not result:
+        return None
+    return result[0].shader_node
