@@ -49,12 +49,13 @@ def __filter_texture_info(blender_shader_sockets_or_texture_slots, export_settin
     if not all([elem is not None for elem in blender_shader_sockets_or_texture_slots]):
         return False
     if isinstance(blender_shader_sockets_or_texture_slots[0], bpy.types.NodeSocket):
-        if any([__get_tex_from_socket(socket) is None for socket in blender_shader_sockets_or_texture_slots]):
-            # sockets do not lead to a texture --> discard
+        if all([__get_tex_from_socket(socket) is None for socket in blender_shader_sockets_or_texture_slots]):
+            # none of the sockets lead to a texture --> discard
             return False
 
         resolution = __get_tex_from_socket(blender_shader_sockets_or_texture_slots[0]).shader_node.image.size
-        if any(any(a != b for a, b in zip(__get_tex_from_socket(elem).shader_node.image.size, resolution))
+        if any(any(a != b and a is not None and b is not None\
+            for a, b in zip(__get_tex_size_from_socket(elem), resolution))
                for elem in blender_shader_sockets_or_texture_slots):
             def format_image(image_node):
                 return "{} ({}x{})".format(image_node.name, image_node.image.size[0], image_node.image.size[1])
@@ -136,3 +137,9 @@ def __get_tex_from_socket(socket):
     if not result:
         return None
     return result[0]
+
+def __get_tex_size_from_socket(socket):
+    tex = __get_tex_from_socket(socket)
+    if tex is None:
+        return None
+    return tex.shader_node.image.size
