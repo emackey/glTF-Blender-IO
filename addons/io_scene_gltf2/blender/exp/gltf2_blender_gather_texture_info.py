@@ -53,19 +53,22 @@ def __filter_texture_info(blender_shader_sockets_or_texture_slots, export_settin
             # none of the sockets lead to a texture --> discard
             return False
 
-        resolution = __get_tex_from_socket(blender_shader_sockets_or_texture_slots[0]).shader_node.image.size
-        if any(any(a != b and a is not None and b is not None\
-            for a, b in zip(__get_tex_size_from_socket(elem), resolution))
-               for elem in blender_shader_sockets_or_texture_slots):
-            def format_image(image_node):
-                return "{} ({}x{})".format(image_node.name, image_node.image.size[0], image_node.image.size[1])
+        resolution = None
+        for socket in blender_shader_sockets_or_texture_slots:
+            tex = __get_tex_from_socket(socket)
+            nextRes = __get_size_from_tex(tex)
+            if resolution is None:
+                resolution = nextRes
+                image1 = tex
+            elif nextRes is not None and nextRes != resolution:
+                def format_image(image_node):
+                    return "{} ({}x{})".format(image_node.image.name, image_node.image.size[0], image_node.image.size[1])
 
-            images = [format_image(__get_tex_from_socket(elem).shader_node) for elem in
-                      blender_shader_sockets_or_texture_slots]
+                images = [format_image(elem.shader_node) for elem in (image1, tex)]
 
-            print_console("ERROR", "Image sizes do not match. In order to be merged into one image file, "
-                                   "images need to be of the same size. Images: {}".format(images))
-            return False
+                print_console("ERROR", "Image sizes do not match. In order to be merged into one image file, "
+                                    "images need to be of the same size. Images: {}".format(images))
+                return False
 
     return True
 
@@ -138,8 +141,7 @@ def __get_tex_from_socket(socket):
         return None
     return result[0]
 
-def __get_tex_size_from_socket(socket):
-    tex = __get_tex_from_socket(socket)
+def __get_size_from_tex(tex):
     if tex is None:
         return None
     return tex.shader_node.image.size
