@@ -99,6 +99,39 @@ function validateGltf(gltfPath, done) {
     });
 }
 
+function revalidateGltf(gltfPath, outPath) {
+    const asset = fs.readFileSync(gltfPath);
+    validator.validateBytes(new Uint8Array(asset), {
+        uri: gltfPath,
+        externalResourceFunction: (uri) =>
+            new Promise((resolve, reject) => {
+                uri = path.resolve(path.dirname(gltfPath), decodeURIComponent(uri));
+                // console.info("Loading external file: " + uri);
+                fs.readFile(uri, (err, data) => {
+                    if (err) {
+                        console.error(err.toString());
+                        reject(err.toString());
+                        return;
+                    }
+                    resolve(data);
+                });
+            })
+    }).then((result) => {
+        fs.writeFileSync(outPath, JSON.stringify(result, null, '    '));
+        // [result] will contain validation report in object form.
+        if (result.issues.numErrors > 0) {
+            const errors = result.issues.messages.filter(i => i.severity === 0)
+                .reduce((msg, i, idx) => (idx > 5) ? msg : `${msg}\n${i.pointer} - ${i.message} (${i.code})`, '');
+            throw new Error("Validation failed for " + gltfPath + '\nFirst few messages:' + errors);
+        }
+    }, (ex) => {
+        // Promise rejection means that arguments were invalid or validator was unable
+        // to detect file format (glTF or GLB).
+        // [result] will contain exception string.
+        console.error(ex);
+    });
+}
+
 var assert = require('assert');
 
 // This tests floating-point numbers for equality, ignoring roundoff errors.
@@ -678,7 +711,8 @@ describe('Importer / Exporter (Roundtrip)', function() {
                     it(dir, function(done) {
                         let outDirName = 'out' + blenderVersion + variant[0];
                         let gltfSrcPath = `roundtrip/${dir}/${dir}.gltf`;
-                        let gltfSrcReport = JSON.parse(fs.readFileSync(`roundtrip/${dir}/${dir}_report.json`, 'utf8'));
+                        let gltfSrcReportName = `roundtrip/${dir}/${dir}_report.json`;
+                        let gltfSrcReport = JSON.parse(fs.readFileSync(gltfSrcReportName, 'utf8'));
                         let ext = args.indexOf('--glb') === -1 ? '.gltf' : '.glb';
                         let outDirPath = path.resolve(OUT_PREFIX, 'roundtrip', dir, outDirName);
                         let gltfDstPath = path.resolve(outDirPath, `${dir}${ext}`);
@@ -690,6 +724,8 @@ describe('Importer / Exporter (Roundtrip)', function() {
                         blenderRoundtripGltf(blenderVersion, gltfSrcPath, outDirPath, (error) => {
                             if (error)
                                 return done(error);
+
+                            revalidateGltf(gltfSrcPath, gltfSrcReportName);
 
                             validateGltf(gltfDstPath, (error, gltfDstReport) => {
                                 if (error)
